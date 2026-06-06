@@ -365,6 +365,8 @@ fn apply_interactive_filters(
                 } else {
                     false
                 }
+            } else if p.service.as_deref() == Some("nginx_error") || p.service.as_deref() == Some("apache_error") {
+                true
             } else {
                 p.method.as_deref() == Some("FAILED") || p.method.as_deref() == Some("INVALID")
             }

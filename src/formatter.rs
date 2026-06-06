@@ -98,6 +98,34 @@ impl Formatter {
                 "{} {} │ {} │ {} │ {} │ {} │ {}",
                 flag, ip_formatted, time_formatted, method_formatted, status_formatted, path_formatted, ua_formatted
             )
+        } else if service == "nginx_error" || service == "apache_error" {
+            // Web Error Log formatting: Flag | IP | Time | Level | Request | Message | Details
+            let level = line.method.as_deref().unwrap_or("ERROR");
+            let level_formatted = match level {
+                "EMERG" | "ALERT" | "CRIT" => level.red().bold().underline(),
+                "ERROR" | "ERR" => level.red().bold(),
+                "WARN" | "WARNING" => level.yellow().bold(),
+                "NOTICE" => level.green().bold(),
+                "INFO" => level.cyan(),
+                "DEBUG" => level.blue(),
+                _ => level.normal(),
+            };
+
+            let level_str = format!("{:<5}", level_formatted);
+
+            let request = line.status.as_deref().unwrap_or("-");
+            let request_formatted = request.white().bold();
+
+            let message = line.path_or_msg.as_deref().unwrap_or("-");
+            let message_colored = highlight_keywords(message);
+
+            let details = line.user_agent.as_deref().unwrap_or("-");
+            let details_formatted = details.truecolor(140, 140, 140);
+
+            format!(
+                "{} {} │ {} │ {} │ {} │ {} │ {}",
+                flag, ip_formatted, time_formatted, level_str, request_formatted, message_colored, details_formatted
+            )
         } else {
             // Syslog/SSH formatting: Flag | IP | Time | Service | Action | Message
             let service_formatted = format!("{:<6}", service).magenta().bold();
@@ -145,7 +173,7 @@ impl Formatter {
 
 /// Parse timestamp from log format and return formatted local time or date
 fn format_timestamp(ts: &str) -> String {
-    // E.g. "06/Jun/2026:12:34:56 +0000" or "Jun  6 12:34:56"
+    // E.g. "06/Jun/2026:12:34:56 +0000", "Jun  6 12:34:56", or "Sun Jun 06 05:45:48.123456 2026"
     // Let's extract just the HH:MM:SS or the date + time part for display
     if ts.contains(':') {
         let parts: Vec<&str> = ts.split(':').collect();
@@ -153,9 +181,11 @@ fn format_timestamp(ts: &str) -> String {
             // Nginx/Apache style: "06/Jun/2026:12:34:56 +0000"
             return format!("{}:{}:{}", parts[1], parts[2], parts[3].split_whitespace().next().unwrap_or(""));
         } else if parts.len() == 3 {
-            // Syslog style: "Jun  6 12:36:00"
+            // Syslog style: "Jun  6 12:36:00" or Apache error style: "Sun Jun 06 05:45:48.123456 2026"
             if let Some(hour) = parts[0].split_whitespace().last() {
-                return format!("{}:{}:{}", hour, parts[1], parts[2]);
+                let sec_part = parts[2].split_whitespace().next().unwrap_or("");
+                let sec_clean = sec_part.split('.').next().unwrap_or("");
+                return format!("{}:{}:{}", hour, parts[1], sec_clean);
             }
         }
     }
