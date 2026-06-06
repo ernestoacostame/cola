@@ -1,3 +1,5 @@
+<img width="1798" height="1045" alt="cola" src="https://github.com/user-attachments/assets/5010914d-05b4-42de-a130-f6ddcfe1580f" />
+
 # 🥤 Cola — Enhanced Real-Time Log Viewer
 
 `Cola` es un reemplazo enriquecido de `tail -f` escrito en Rust. Analiza archivos de logs (como Nginx, Apache o Syslog/SSH) en tiempo real, geolocaliza direcciones IP para mostrar banderas del país de origen en formato emoji unicode, resalta palabras clave con colores ANSI y cuenta con filtros avanzados interactivos al vuelo.
