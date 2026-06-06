@@ -1,0 +1,15 @@
+# Cargo build output
+/target
+
+# Local rustup and cargo installation folders (Cola local environment)
+/.cargo
+/.rustup
+
+# Distribution archives and directories
+/cola-dist
+/cola-dist.tar.gz
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/

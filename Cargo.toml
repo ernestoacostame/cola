@@ -1,0 +1,22 @@
+[package]
+name = "cola"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+notify = "6.1.1"
+tokio = { version = "1.38", features = ["full"] }
+regex = "1.10"
+maxminddb = "0.28"
+colored = "2.1"
+anyhow = "1.0"
+chrono = "0.4"
+crossterm = "0.27"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
