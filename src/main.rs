@@ -187,12 +187,26 @@ async fn main() -> anyhow::Result<()> {
         handler_exit();
     });
 
-    // 7. Start watching file
-    let watcher = FileWatcher::new(args.file.clone(), args.tail);
-    let mut lines_rx = watcher.start().await?;
+    // 7. Start watching files and merge streams
+    let (lines_tx, mut lines_rx) = tokio::sync::mpsc::channel::<(std::path::PathBuf, String)>(100);
+
+    for file_path in args.files.clone() {
+        let watcher = FileWatcher::new(file_path.clone(), args.tail);
+        let mut file_rx = watcher.start().await?;
+        let lines_tx = lines_tx.clone();
+        tokio::spawn(async move {
+            while let Some(line) = file_rx.recv().await {
+                if lines_tx.send((file_path.clone(), line)).await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
+    // Drop our copy of the sender to ensure channel closes when all tasks drop
+    drop(lines_tx);
 
     // 8. Event loop
-    while let Some(line) = lines_rx.recv().await {
+    while let Some((file_path, line)) = lines_rx.recv().await {
         // Apply CLI filters first
         if !parser_manager.filter_line(&line) {
             continue;
@@ -229,7 +243,16 @@ async fn main() -> anyhow::Result<()> {
 
         // Format and print
         let output = formatter.format_line(parsed, &line, geo_result.as_ref());
-        println_raw!("{}", output);
+        if args.files.len() > 1 {
+            let file_name = file_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+            let colored_name = colorize_filename(file_name);
+            println_raw!("[{}] {}", colored_name, output);
+        } else {
+            println_raw!("{}", output);
+        }
     }
 
     // Restore terminal before exiting main
@@ -239,7 +262,6 @@ async fn main() -> anyhow::Result<()> {
 
 fn print_banner(args: &cli::Args, geoip: &GeoIp) {
     let title = "🥤 Cola v0.1.0 — Enhanced Log Viewer".cyan().bold();
-    let file_label = "Monitoring:".green().bold();
     let format_label = "Format:    ".green().bold();
     let geoip_label = "GeoIP:     ".green().bold();
     let filters_label = "Filters:   ".green().bold();
@@ -254,7 +276,21 @@ fn print_banner(args: &cli::Args, geoip: &GeoIp) {
     println_raw!("{}", "┌────────────────────────────────────────────────────────┐".cyan());
     println_raw!("│  {}                  │", title);
     println_raw!("│                                                        │");
-    println_raw!("│  {} {:<40} │", file_label, args.file.display());
+    
+    for (i, file) in args.files.iter().enumerate() {
+        let path_str = file.display().to_string();
+        let display_str = if path_str.len() > 40 {
+            format!("...{}", &path_str[path_str.len() - 37..])
+        } else {
+            path_str
+        };
+        if i == 0 {
+            println_raw!("│  {} {:<40} │", "Monitoring:".green().bold(), display_str);
+        } else {
+            println_raw!("│              {:<40} │", display_str);
+        }
+    }
+    
     println_raw!("│  {} {:<40} │", format_label, format_str);
     
     if args.no_geo {
@@ -362,4 +398,28 @@ fn apply_interactive_filters(
     }
 
     true
+}
+
+fn colorize_filename(name: &str) -> colored::ColoredString {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    name.hash(&mut hasher);
+    let hash_val = hasher.finish();
+    let colors = [
+        colored::Color::Red,
+        colored::Color::Green,
+        colored::Color::Yellow,
+        colored::Color::Blue,
+        colored::Color::Magenta,
+        colored::Color::Cyan,
+        colored::Color::BrightRed,
+        colored::Color::BrightGreen,
+        colored::Color::BrightYellow,
+        colored::Color::BrightBlue,
+        colored::Color::BrightMagenta,
+        colored::Color::BrightCyan,
+    ];
+    let color = colors[(hash_val % colors.len() as u64) as usize];
+    name.color(color).bold()
 }

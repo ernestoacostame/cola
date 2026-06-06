@@ -10,7 +10,7 @@ Está diseñado para ser altamente eficiente, ligero y totalmente autocontenido 
 
 ## ✨ Características
 
-*   **Monitoreo en Tiempo Real**: Sigue la escritura de archivos de log de forma continua de manera eficiente sin sobrecargar la CPU, soportando rotaciones de logs y truncados.
+*   **Monitoreo en Tiempo Real**: Sigue la escritura de uno o más archivos de log simultáneamente de forma continua y eficiente sin sobrecargar la CPU. Soporta rotaciones de logs, truncamientos y fusiona los flujos de logs aplicando etiquetas de nombres de archivos coloreadas de forma única.
 *   **Geolocalización de IPs**: Detecta IPs IPv4 y consulta su origen en milisegundos usando una base de datos MaxMind GeoIP2 local (`.mmdb`), traduciendo los códigos de país en emojis de banderas.
 *   **Caché en Memoria**: Implementa una caché concurrente thread-safe para evitar consultas repetitivas de IP a disco y optimizar el rendimiento.
 *   **Auto-detección Sticky**: Detecta el formato de log al vuelo (Nginx Combined, Apache Common/Combined y Syslog/SSH) y bloquea el parser para maximizar el desempeño en streams rápidos.
@@ -80,6 +80,12 @@ Mientras `Cola` está imprimiendo logs en tu terminal, puedes presionar teclas p
 ### Monitoreo básico (con auto-detección de formato)
 ```bash
 cola /var/log/nginx/access.log
+```
+
+### Monitorear múltiples archivos simultáneamente
+Puedes pasar varios archivos posicionales. Sus líneas se combinarán en tiempo real y cada una se mostrará con un prefijo del nombre de archivo coloreado dinámicamente para distinguirlos fácilmente:
+```bash
+cola /var/log/nginx/access.log /var/log/nginx/error.log
 ```
 
 ### Especificar líneas iniciales a leer (equivalente a tail -n)

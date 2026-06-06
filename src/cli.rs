@@ -18,9 +18,9 @@ pub enum LogFormat {
     long_about = "A high-performance tail -f replacement that parses log files (Nginx, Apache, Syslog), geolocates IP addresses to flags, and filters/formats logs in real-time."
 )]
 pub struct Args {
-    /// The log file to monitor in real-time
-    #[arg(value_name = "FILE")]
-    pub file: PathBuf,
+    /// The log files to monitor in real-time
+    #[arg(value_name = "FILES", required = true, num_args = 1..)]
+    pub files: Vec<PathBuf>,
 
     /// Path to MaxMind GeoLite2-Country (.mmdb) database [default: ~/.cola/GeoLite2-Country.mmdb]
     #[arg(
